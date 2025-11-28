@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UNO Scoreboard</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #09111f;
+        --bg-muted: rgba(15, 23, 42, 0.82);
+        --surface: rgba(255, 255, 255, 0.06);
+        --text: #f8fafc;
+        --text-muted: rgba(248, 250, 252, 0.75);
+        --accent: #ef4444;
+        --accent-strong: #facc15;
+        --accent-alt: #2563eb;
+        --success: #22c55e;
+        --danger: #f97316;
+        --border: rgba(248, 250, 252, 0.1);
+        --shadow: 0 12px 40px rgba(15, 23, 42, 0.35);
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #111c37 0%, #05080f 55%, #010409 100%);
+        color: var(--text);
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .app {
+        width: min(1100px, 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        backdrop-filter: blur(20px);
+      }
+
+      header {
+        padding: 24px;
+        border-radius: 24px;
+        background: var(--bg-muted);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 1.2rem + 2vw, 2.6rem);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      header p {
+        margin: 8px 0 0;
+        color: var(--text-muted);
+      }
+
+      main {
+        position: relative;
+        flex: 1;
+      }
+
+      .view {
+        position: absolute;
+        inset: 0;
+        background: var(--bg-muted);
+        border-radius: 24px;
+        border: 1px solid var(--border);
+        padding: clamp(20px, 4vw, 32px);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+        transition: opacity 240ms ease, visibility 240ms ease;
+        box-shadow: var(--shadow);
+      }
+
+      .view.is-active {
+        opacity: 1;
+        pointer-events: auto;
+        visibility: visible;
+      }
+
+      form {
+        display: contents;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: clamp(16px, 3vw, 24px);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        color: var(--text);
+        padding: 12px 16px;
+        transition: border-color 160ms ease, transform 160ms ease;
+        font-feature-settings: "tnum";
+      }
+
+      input[type="text"]:focus,
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        margin: 0;
+      }
+
+      button,
+      .link-button {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 22px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      button.primary {
+        background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+        color: #0f172a;
+        box-shadow: 0 12px 30px rgba(239, 68, 68, 0.35);
+      }
+
+      button.primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      button.secondary {
+        background: rgba(15, 23, 42, 0.7);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+      }
+
+      button:hover:not(:disabled),
+      .link-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
+      }
+
+      .link-button {
+        background: none;
+        color: var(--accent-strong);
+        border: none;
+        padding: 0;
+        text-decoration: underline;
+        text-decoration-color: rgba(250, 204, 21, 0.6);
+        text-decoration-thickness: 2px;
+      }
+
+      .home-grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .player-name-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .dashboard-layout {
+        display: grid;
+        gap: 20px;
+      }
+
+      .round-input-row {
+        display: grid;
+        grid-template-columns: 1fr minmax(100px, 140px);
+        gap: 12px;
+        align-items: center;
+      }
+
+      .round-input-row label span {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        letter-spacing: 0.02em;
+      }
+
+      .round-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .scoreboard-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .player-card {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.6);
+        transition: transform 160ms ease, border-color 160ms ease;
+      }
+
+      .player-card.is-active {
+        border-color: rgba(34, 197, 94, 0.6);
+      }
+
+      .player-card header {
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+      }
+
+      .player-card header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .badge.active {
+        background: rgba(34, 197, 94, 0.2);
+        color: var(--success);
+      }
+
+      .badge.out {
+        background: rgba(148, 163, 184, 0.2);
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      .score-display {
+        font-size: clamp(1.6rem, 1.2rem + 1vw, 2rem);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        font-feature-settings: "tnum";
+      }
+
+      .progress-bar {
+        position: relative;
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.85);
+        overflow: hidden;
+        border: 1px solid rgba(248, 250, 252, 0.08);
+      }
+
+      .progress-bar span {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(239, 68, 68, 0.85),
+          rgba(250, 204, 21, 0.65),
+          rgba(37, 99, 235, 0.7)
+        );
+        transform-origin: left center;
+        transition: transform 240ms ease;
+      }
+
+      .controls-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .controls-grid .inline-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .celebration-card {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: clamp(24px, 6vw, 48px);
+        gap: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .celebration-card h2 {
+        font-size: clamp(2.1rem, 1.4rem + 2vw, 3rem);
+        margin: 0;
+      }
+
+      .celebration-card p {
+        margin: 0;
+        color: var(--text-muted);
+      }
+
+      .celebration-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+      }
+
+      .confetti-container {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .confetti-piece {
+        position: absolute;
+        width: 10px;
+        height: 18px;
+        border-radius: 4px;
+        opacity: 0;
+        animation: confetti-fall linear forwards;
+      }
+
+      @keyframes confetti-fall {
+        0% {
+          opacity: 0;
+          transform: translate3d(var(--x-start), -10%, 0) rotate(0deg);
+        }
+        10% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translate3d(var(--x-end), 110%, 0) rotate(720deg);
+        }
+      }
+
+      @media (min-width: 900px) {
+        .dashboard-layout {
+          grid-template-columns: 1.1fr 1fr;
+          align-items: start;
+        }
+
+        .scoreboard-list {
+          max-height: 460px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 16px;
+        }
+
+        .round-input-row {
+          grid-template-columns: 1fr;
+        }
+
+        .controls-grid {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .controls-grid .inline-group {
+          width: 100%;
+          justify-content: space-between;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>UNO Scoreboard</h1>
+        <p>Track rounds, eliminate high scorers, and celebrate the champion.</p>
+      </header>
+      <main>
+        <section class="view" data-view="home">
+          <div class="card home-grid">
+            <h2>Game Setup</h2>
+            <form id="setup-form" autocomplete="off" novalidate>
+              <div class="input-group">
+                <label for="player-count">Number of players</label>
+                <input
+                  id="player-count"
+                  name="player-count"
+                  type="number"
+                  min="2"
+                  max="10"
+                  step="1"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div class="input-group">
+                <label>Player names</label>
+                <div id="player-names" class="player-name-grid"></div>
+              </div>
+              <div class="input-group">
+                <label for="max-score-setup">Max score (elimination threshold)</label>
+                <input
+                  id="max-score-setup"
+                  name="max-score"
+                  type="number"
+                  min="50"
+                  step="10"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div>
+                <button class="primary" type="submit">Start Game</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" data-view="dashboard">
+          <div class="dashboard-layout">
+            <div class="card">
+              <h2>Round Entry</h2>
+              <form id="round-form" autocomplete="off">
+                <div id="round-inputs" class="round-inputs"></div>
+                <div class="round-actions">
+                  <button class="primary" type="submit" id="submit-round-btn">Submit Round</button>
+                  <button class="secondary" type="button" id="undo-round-btn">Undo Last Round</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="card">
+              <h2>Scoreboard</h2>
+              <div id="scoreboard" class="scoreboard-list" role="list"></div>
+            </div>
+
+            <div class="card">
+              <h2>Game Controls</h2>
+              <div class="controls-grid">
+                <div class="inline-group">
+                  <label for="max-score-dashboard">Max score</label>
+                  <input
+                    id="max-score-dashboard"
+                    type="number"
+                    min="50"
+                    step="10"
+                    inputmode="numeric"
+                  />
+                </div>
+                <button class="link-button" type="button" id="reset-btn">Reset Game</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="celebration">
+          <div class="card celebration-card">
+            <div class="confetti-container" id="confetti-container" aria-hidden="true"></div>
+            <div>
+              <h2 id="winner-title"></h2>
+              <p id="winner-message"></p>
+            </div>
+            <div class="celebration-actions">
+              <button class="primary" type="button" id="continue-btn">Continue Game</button>
+              <button class="secondary" type="button" id="new-game-btn">New Game</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "uno_scoreboard_state_v1";
+      const VIEWS = new Set(["home", "dashboard", "celebration"]);
+
+      const defaultState = () => ({
+        view: "home",
+        maxScore: 500,
+        players: [],
+        rounds: [],
+        winnerId: null,
+      });
+
+      let state = defaultState();
+      let confettiTimeoutHandle = null;
+      let audioCtx = null;
+      let celebrationSoundPlayed = false;
+
+      const elements = {
+        views: Array.from(document.querySelectorAll(".view")),
+        setupForm: document.getElementById("setup-form"),
+        playerCountInput: document.getElementById("player-count"),
+        playerNamesContainer: document.getElementById("player-names"),
+        setupMaxScoreInput: document.getElementById("max-score-setup"),
+        roundForm: document.getElementById("round-form"),
+        roundInputsContainer: document.getElementById("round-inputs"),
+        submitRoundBtn: document.getElementById("submit-round-btn"),
+        undoRoundBtn: document.getElementById("undo-round-btn"),
+        scoreboardContainer: document.getElementById("scoreboard"),
+        dashboardMaxScoreInput: document.getElementById("max-score-dashboard"),
+        resetBtn: document.getElementById("reset-btn"),
+        winnerTitle: document.getElementById("winner-title"),
+        winnerMessage: document.getElementById("winner-message"),
+        continueBtn: document.getElementById("continue-btn"),
+        newGameBtn: document.getElementById("new-game-btn"),
+        confettiContainer: document.getElementById("confetti-container"),
+      };
+
+      function generateId(prefix) {
+        return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          console.warn("Unable to save UNO scoreboard state:", error);
+        }
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            state = defaultState();
+            return;
+          }
+          const parsed = JSON.parse(raw);
+          const next = defaultState();
+          if (parsed && typeof parsed === "object") {
+            if (typeof parsed.maxScore === "number" && parsed.maxScore >= 50) {
+              next.maxScore = Math.floor(parsed.maxScore);
+            }
+            if (Array.isArray(parsed.players)) {
+              next.players = parsed.players
+                .map((player) => ({
+                  id: typeof player.id === "string" ? player.id : generateId("player"),
+                  name: typeof player.name === "string" ? player.name : "Player",
+                  score: Number.isFinite(player.score) ? player.score : 0,
+                  active: player.active !== false,
+                }))
+                .slice(0, 10);
+            }
+            if (Array.isArray(parsed.rounds)) {
+              next.rounds = parsed.rounds
+                .filter((round) => round && typeof round === "object")
+                .map((round) => ({
+                  id: typeof round.id === "string" ? round.id : generateId("round"),
+                  timestamp: typeof round.timestamp === "number" ? round.timestamp : Date.now(),
+                  pointsByPlayer:
+                    round.pointsByPlayer && typeof round.pointsByPlayer === "object"
+                      ? round.pointsByPlayer
+                      : {},
+                }));
+            }
+            if (typeof parsed.view === "string" && VIEWS.has(parsed.view)) {
+              next.view = parsed.view;
+            }
+            if (
+              typeof parsed.winnerId === "string" &&
+              next.players.some((player) => player.id === parsed.winnerId)
+            ) {
+              next.winnerId = parsed.winnerId;
+            }
+          }
+          state = next;
+          recomputeFromRounds();
+        } catch (error) {
+          console.warn("Unable to load UNO scoreboard state:", error);
+          state = defaultState();
+        }
+      }
+
+      function render() {
+        elements.views.forEach((section) => {
+          const isActive = section.dataset.view === state.view;
+          section.classList.toggle("is-active", isActive);
+        });
+
+        if (state.view !== "celebration") {
+          celebrationSoundPlayed = false;
+        }
+
+        renderHome();
+        renderDashboard();
+        renderCelebration();
+      }
+
+      function renderHome() {
+        const isActive = state.view === "home";
+        const playerTotal = state.players.length > 0 ? state.players.length : 4;
+        elements.playerCountInput.value = playerTotal;
+        elements.setupMaxScoreInput.value = state.maxScore;
+        syncPlayerNameInputs(playerTotal, state.players);
+        if (!isActive) {
+          return;
+        }
+        elements.playerCountInput.focus({ preventScroll: true });
+      }
+
+      function renderDashboard() {
+        if (state.view !== "dashboard") {
+          elements.submitRoundBtn.disabled = false;
+          elements.undoRoundBtn.disabled = state.rounds.length === 0;
+          return;
+        }
+        elements.dashboardMaxScoreInput.value = state.maxScore;
+        elements.undoRoundBtn.disabled = state.rounds.length === 0;
+
+        const activePlayers = state.players.filter((player) => player.active);
+        elements.submitRoundBtn.disabled = activePlayers.length === 0;
+
+        elements.roundInputsContainer.innerHTML = "";
+        state.players.forEach((player, index) => {
+          const row = document.createElement("div");
+          row.className = "round-input-row";
+
+          const rowLabel = document.createElement("label");
+          rowLabel.setAttribute("for", `round-input-${player.id}`);
+          rowLabel.innerHTML = `
+            <strong>${player.name}</strong>
+            <span>${player.active ? "Active" : "Eliminated"}</span>
+          `;
+
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = "0";
+          input.step = "1";
+          input.inputMode = "numeric";
+          input.id = `round-input-${player.id}`;
+          input.dataset.playerId = player.id;
+          input.value = "0";
+          input.disabled = !player.active;
+          input.autocomplete = "off";
+
+          if (index === 0 && player.active) {
+            requestAnimationFrame(() => input.focus({ preventScroll: true }));
+          }
+
+          row.append(rowLabel, input);
+          elements.roundInputsContainer.appendChild(row);
+        });
+
+        elements.scoreboardContainer.innerHTML = "";
+        state.players.forEach((player) => {
+          const progress = state.maxScore > 0 ? Math.min(player.score / state.maxScore, 1) : 0;
+          const card = document.createElement("article");
+          card.className = `player-card${player.active ? " is-active" : ""}`;
+
+          const badge = document.createElement("span");
+          badge.className = `badge ${player.active ? "active" : "out"}`;
+          badge.textContent = player.active ? "Active" : "Out";
+
+          const header = document.createElement("header");
+          const title = document.createElement("h3");
+          title.textContent = player.name;
+          const score = document.createElement("div");
+          score.className = "score-display";
+          score.textContent = `${player.score}`;
+          header.append(title, badge);
+
+          const progressBar = document.createElement("div");
+          progressBar.className = "progress-bar";
+          progressBar.setAttribute("role", "progressbar");
+          progressBar.setAttribute("aria-valuemin", "0");
+          progressBar.setAttribute("aria-valuemax", String(state.maxScore));
+          progressBar.setAttribute("aria-valuenow", String(player.score));
+          const fill = document.createElement("span");
+          fill.style.transform = `scaleX(${progress})`;
+          progressBar.append(fill);
+
+          card.append(header, score, progressBar);
+          elements.scoreboardContainer.appendChild(card);
+        });
+      }
+
+      function renderCelebration() {
+        if (state.view !== "celebration") {
+          stopConfetti();
+          celebrationSoundPlayed = false;
+          return;
+        }
+        const winner = state.players.find((player) => player.id === state.winnerId);
+        if (winner) {
+          elements.winnerTitle.textContent = `${winner.name} wins!`;
+          elements.winnerMessage.textContent =
+            "UNO mastery unlocked. Keep the streak alive or start a fresh game.";
+        } else {
+          elements.winnerTitle.textContent = "All players eliminated!";
+          elements.winnerMessage.textContent =
+            "No clear champion this time. Undo the round or start over.";
+        }
+        if (!celebrationSoundPlayed) {
+          playCelebrationSound();
+          celebrationSoundPlayed = true;
+        }
+        launchConfetti();
+      }
+
+      function syncPlayerNameInputs(total, existingPlayers) {
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < total; index += 1) {
+          const wrapper = document.createElement("div");
+          wrapper.className = "input-group";
+
+          const id = `player-name-${index + 1}`;
+          const label = document.createElement("label");
+          label.setAttribute("for", id);
+          label.textContent = `Player ${index + 1}`;
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.id = id;
+          input.name = "player-name";
+          input.placeholder = `Player ${index + 1}`;
+          input.maxLength = 40;
+          input.value = existingPlayers[index]?.name ?? "";
+
+          wrapper.append(label, input);
+          fragment.appendChild(wrapper);
+        }
+        elements.playerNamesContainer.replaceChildren(fragment);
+      }
+
+      function startNewGame(names, maxScore) {
+        const sanitizedNames = names.map((name, index) => {
+          const trimmed = name.trim();
+          return trimmed.length > 0 ? trimmed : `Player ${index + 1}`;
+        });
+        state = {
+          view: "dashboard",
+          maxScore,
+          players: sanitizedNames.map((name) => ({
+            id: generateId("player"),
+            name,
+            score: 0,
+            active: true,
+          })),
+          rounds: [],
+          winnerId: null,
+        };
+        saveState();
+        render();
+      }
+
+      function submitRound(pointsByPlayer) {
+        if (state.players.length === 0) {
+          return;
+        }
+        state.rounds.push({
+          id: generateId("round"),
+          timestamp: Date.now(),
+          pointsByPlayer,
+        });
+
+        state.players = state.players.map((player) => {
+          const delta = Number(pointsByPlayer[player.id] ?? 0);
+          const nextScore = player.score + (Number.isFinite(delta) ? delta : 0);
+          return {
+            ...player,
+            score: nextScore,
+            active: nextScore < state.maxScore,
+          };
+        });
+
+        playRoundSubmitSound();
+        finalizeRoundOutcome();
+      }
+
+      function finalizeRoundOutcome() {
+        const activePlayers = state.players.filter((player) => player.active);
+        if (activePlayers.length === 1) {
+          state.view = "celebration";
+          state.winnerId = activePlayers[0].id;
+        } else if (activePlayers.length === 0) {
+          state.view = "celebration";
+          state.winnerId = null;
+        } else {
+          state.view = "dashboard";
+          state.winnerId = null;
+        }
+        saveState();
+        render();
+      }
+
+      function undoLastRound() {
+        if (state.rounds.length === 0) {
+          return;
+        }
+        state.rounds.pop();
+        recomputeFromRounds();
+        state.view = "dashboard";
+        state.winnerId = null;
+        saveState();
+        render();
+      }
+
+      function recomputeFromRounds() {
+        state.players = state.players.map((player) => ({
+          ...player,
+          score: 0,
+          active: true,
+        }));
+
+        for (const round of state.rounds) {
+          for (const player of state.players) {
+            const deltaRaw = round.pointsByPlayer?.[player.id];
+            const delta = Number.isFinite(deltaRaw) ? deltaRaw : Number(deltaRaw);
+            if (Number.isFinite(delta) && delta > 0) {
+              player.score += delta;
+            }
+          }
+        }
+
+        state.players = state.players.map((player) => ({
+          ...player,
+          active: player.score < state.maxScore,
+        }));
+
+        const activePlayers = state.players.filter((player) => player.active);
+        if (activePlayers.length === 1) {
+          state.view = "celebration";
+          state.winnerId = activePlayers[0].id;
+        } else if (activePlayers.length === 0 && state.players.length > 0) {
+          state.view = "celebration";
+          state.winnerId = null;
+        } else if (!VIEWS.has(state.view) || state.view === "celebration") {
+          state.view = "dashboard";
+          state.winnerId = null;
+        }
+      }
+
+      function adjustMaxScore(newMax) {
+        const sanitized = Math.floor(newMax);
+        if (!Number.isFinite(sanitized) || sanitized < 50) {
+          return;
+        }
+        state.maxScore = sanitized;
+        state.players = state.players.map((player) => ({
+          ...player,
+          active: player.score < state.maxScore,
+        }));
+        finalizeRoundOutcome();
+      }
+
+      function resetAll() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+          console.warn("Unable to clear UNO scoreboard state:", error);
+        }
+        state = defaultState();
+        render();
+      }
+
+      function launchConfetti() {
+        stopConfetti();
+        const colors = ["#ef4444", "#facc15", "#22c55e", "#2563eb", "#f97316"];
+        const pieces = 80;
+        const fragment = document.createDocumentFragment();
+
+        for (let index = 0; index < pieces; index += 1) {
+          const piece = document.createElement("div");
+          const duration = 3000 + Math.random() * 2000;
+          const delay = Math.random() * 400;
+          const xStart = `${Math.random() * 100 - 50}%`;
+          const xEnd = `${Math.random() * 100 - 50}%`;
+          piece.className = "confetti-piece";
+          piece.style.background = colors[index % colors.length];
+          piece.style.animationDuration = `${duration}ms`;
+          piece.style.animationDelay = `${delay}ms`;
+          piece.style.setProperty("--x-start", xStart);
+          piece.style.setProperty("--x-end", xEnd);
+          piece.style.left = `${Math.random() * 100}%`;
+          fragment.appendChild(piece);
+        }
+
+        elements.confettiContainer.replaceChildren(fragment);
+
+        confettiTimeoutHandle = window.setTimeout(() => {
+          elements.confettiContainer.textContent = "";
+        }, 5200);
+      }
+
+      function stopConfetti() {
+        elements.confettiContainer.textContent = "";
+        if (confettiTimeoutHandle !== null) {
+          clearTimeout(confettiTimeoutHandle);
+          confettiTimeoutHandle = null;
+        }
+      }
+
+      function ensureAudioContext() {
+        if (audioCtx) {
+          return audioCtx;
+        }
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) {
+          return null;
+        }
+        audioCtx = new AudioContextCtor();
+        return audioCtx;
+      }
+
+      function playTone({ frequency, type = "sine", duration = 200, gain = 0.25, delay = 0 }) {
+        const ctx = ensureAudioContext();
+        if (!ctx) {
+          return;
+        }
+        if (ctx.state === "suspended" && typeof ctx.resume === "function") {
+          ctx.resume().catch(() => {});
+        }
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.type = type;
+        oscillator.frequency.value = frequency;
+        gainNode.gain.value = gain;
+        oscillator.connect(gainNode).connect(ctx.destination);
+
+        const startTime = ctx.currentTime + delay / 1000;
+        const stopTime = startTime + duration / 1000;
+        oscillator.start(startTime);
+        gainNode.gain.setValueAtTime(gain, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, stopTime);
+        oscillator.stop(stopTime);
+      }
+
+      function playRoundSubmitSound() {
+        playTone({ frequency: 660, type: "triangle", duration: 180, gain: 0.18 });
+        playTone({ frequency: 880, type: "triangle", duration: 160, gain: 0.15, delay: 90 });
+      }
+
+      function playCelebrationSound() {
+        playTone({ frequency: 523, type: "sawtooth", duration: 320, gain: 0.22 });
+        playTone({ frequency: 659, type: "sawtooth", duration: 360, gain: 0.2, delay: 70 });
+        playTone({ frequency: 784, type: "sawtooth", duration: 380, gain: 0.18, delay: 140 });
+      }
+
+      // Event wiring
+      elements.playerCountInput.addEventListener("change", (event) => {
+        const count = clamp(Number(event.target.value) || 0, 2, 10);
+        event.target.value = count;
+        syncPlayerNameInputs(count, state.players);
+      });
+
+      elements.setupForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const count = clamp(Number(elements.playerCountInput.value) || 0, 2, 10);
+        const maxScore = Math.max(Number(elements.setupMaxScoreInput.value) || 500, 50);
+        const names = Array.from(
+          elements.playerNamesContainer.querySelectorAll('input[name="player-name"]'),
+        ).map((input) => input.value || "");
+        if (names.length !== count) {
+          syncPlayerNameInputs(count, state.players);
+        }
+        startNewGame(names.slice(0, count), Math.floor(maxScore / 10) * 10);
+      });
+
+      elements.roundForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (state.players.every((player) => !player.active)) {
+          return;
+        }
+        const inputs = Array.from(
+          elements.roundInputsContainer.querySelectorAll("input[data-player-id]"),
+        );
+        const pointsByPlayer = {};
+        let totalPoints = 0;
+
+        inputs.forEach((input) => {
+          const playerId = input.dataset.playerId;
+          const value = Number(input.value || 0);
+          if (Number.isFinite(value) && value > 0) {
+            pointsByPlayer[playerId] = value;
+            totalPoints += value;
+          } else {
+            pointsByPlayer[playerId] = 0;
+          }
+        });
+
+        if (totalPoints === 0) {
+          elements.submitRoundBtn.disabled = true;
+          window.setTimeout(() => {
+            elements.submitRoundBtn.disabled = false;
+          }, 400);
+          return;
+        }
+
+        submitRound(pointsByPlayer);
+      });
+
+      elements.undoRoundBtn.addEventListener("click", () => {
+        undoLastRound();
+      });
+
+      elements.dashboardMaxScoreInput.addEventListener("change", (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value)) {
+          adjustMaxScore(value);
+        }
+      });
+
+      elements.resetBtn.addEventListener("click", () => {
+        resetAll();
+      });
+
+      elements.continueBtn.addEventListener("click", () => {
+        state.view = "dashboard";
+        state.winnerId = null;
+        saveState();
+        render();
+      });
+
+      elements.newGameBtn.addEventListener("click", () => {
+        resetAll();
+      });
+
+      window.addEventListener("load", () => {
+        loadState();
+        render();
+      });
+
+      window.addEventListener("beforeunload", () => {
+        saveState();
+      });
+    </script>
+  </body>
+</html>
